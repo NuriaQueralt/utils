@@ -1,9 +1,11 @@
 '''
 Created on Sep 30, 2016
 
+@name: mondo_class.py
+@description: Module for the Mondo ontology
 @author: Nuria Queralt Rosinach
-@version: 1.0
-@note: Module for the Mondo ontology
+@version: 2.0
+@date: 04-23-2018
 @license: CC0
 '''
 
@@ -46,7 +48,11 @@ class term(object):
             concept = {}
             # get term id, iri
             iri_match = iri_pattern.search(term)
-            iri = iri_match.group(1)
+            try:
+                iri = iri_match.group(1)
+            except AttributeError:
+                #print('term that is not a class: ',term)
+                continue
             id = iri.rsplit('/',1)[1].replace('_',':')
 
             # get term info: label, synonyms, definition
@@ -234,7 +240,8 @@ if __name__ == '__main__':
 
     try:
         # input
-        mondo_f = "/home/nuria/soft/neo4j-community-3.0.3/import/mondo/mondo.owl"
+        #mondo_f = "/home/nuria/soft/neo4j-community-3.0.3/import/mondo/mondo.owl"
+        mondo_f = "/home/nuria/workspace/ngly1-graph/ontologies/mondo.owl"
         mondo_inferred_f = "/home/nuria/soft/neo4j-community-3.0.3/import/mondo/mondo-inferred.owl"
 
         # output
@@ -244,13 +251,16 @@ if __name__ == '__main__':
         tm = term(mondo_f)
         #print(tm.doid2orpha)
         #print(tm.metadata)
-        tm.print_metadata(concepts_f)
+        #tm.print_metadata(concepts_f)
         #print(tm.get_metadata_per_id(id='DOID_0001816'))
         #print(tm.get_specific_metadata_per_id(id='DOID_0001816', metadata='iri'))
         #print(tm.get_specific_metadata_per_id(id='DOID:0001816', metadata='label'))
         #print(tm.get_specific_metadata_per_id(id='DOID_0001816', metadata='definition'))
-        cl = hierarchy(mondo_inferred_f)
+        #cl = hierarchy(mondo_inferred_f)
         #cl.get_total_number_of_terms(), cl.get_predicates(), cl.get_object_namespaces()
+        ## Apr 23rd 2018 version
+        #print(tm.get_metadata_per_id(id='DOID_0001816'))
+        print(tm.get_metadata_per_id(id='MONDO:0015286'))
 
     except OSError:
         print("Some problem occurred....T_T")
