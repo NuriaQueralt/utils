@@ -24,6 +24,7 @@ class term(object):
 
         self.metadata = []
         #self.doid2orpha = {}
+        self.eq_pheno_quality = dict()
 
         # Input
         with open(pheno_owl, 'r', encoding='latin1') as pheno_f:
@@ -37,6 +38,24 @@ class term(object):
         definition_pattern = re.compile(r'<obo:IAO_0000115(.+)>(.+)</obo:IAO_0000115>')
         #doid_pattern = re.compile(r' <owl:Class rdf:about="http://purl.obolibrary.org/obo/DOID_(.+)">')
         #orpha_pattern = re.compile(r'<owl:equivalentClass rdf:resource="http://www.orpha.net/ORDO/Orphanet_(.+)"/>')
+        eq_pattern = re.compile(r'''
+        <owl:equivalentClass>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://purl.obolibrary.org/obo/BFO_0000051"/>
+                <owl:someValuesFrom>
+                    <owl:Class>
+                        <owl:intersectionOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="(.+)"/>
+                            <owl:Restriction>
+                                <owl:onProperty rdf:resource="http://aber-owl.net/#has-quality"/>
+                                <owl:someValuesFrom rdf:resource="http://purl.obolibrary.org/obo/PATO_(.+)"/>
+                            </owl:Restriction>
+                        </owl:intersectionOf>
+                    </owl:Class>
+                </owl:someValuesFrom>
+            </owl:Restriction>
+        </owl:equivalentClass>
+        ''')
 
         # Algorithm
         # Classes in chunks
@@ -114,6 +133,33 @@ class term(object):
         #         orpha_l.append(orpha_code)
         #     self.doid2orpha[doid_code] = set(orpha_l)
 
+        # Get EQ model links
+        for term in pheno_terms:
+            # phenotype id
+            iri_match = iri_pattern.search(term)
+            if iri_match:
+                iri = iri_match.group(1)
+                if '_' in iri:
+                    phenotype = iri.rsplit('/', 1)[1].replace('_', ':')
+                elif '#' in iri:
+                    phenotype = iri.rsplit('#', 1)[1]
+                elif iri.rsplit('/', 1):
+                    phenotype = iri.rsplit('/', 1)[1]
+                else:
+                    print('Problems parsing IRI {} to extract the id.'.format(iri))
+
+            # EQ model match
+            eq_match = eq_pattern.search(term)
+            if eq_match:
+                # entity class
+                #entity = eq_match.group(1)
+                # pato class
+                quality = 'PATO:' + eq_match.group(2)
+                #print('{}\t{}'.format(phenotype,entity))
+                print('{}\t{}'.format(phenotype,quality))
+                self.eq_pheno_quality[phenotype] = quality
+
+
     def get_metadata_per_id(self, id):
         '''
         This function returns all the metadata for term queried: id, iri, label, synonyms, definition.
@@ -180,6 +226,27 @@ class term(object):
         :return: orphanet mappings
         '''
         return self.doid2orpha.get(doid, ['NA'])
+
+    def print_qualities(self,outfile):
+        '''
+        This function extracts quality from EQ model for all classes in the ontology to be used in TILDE.
+        Particularly, returns 'has-quality' relations in prolog format
+        :return: output file called  by the user, sth like 'phenotype_quality_relations.bg'
+        '''
+
+        # Output
+        out_f = open('{}'.format(outfile),'w')
+
+        # Algorithm
+        # Parse chunks and extract mappings, term info
+        for phenotype, quality in self.eq_pheno_quality.items():
+            # get qualities
+            # (hasQuality(x,y),Q(y) :- P(x))
+            out_f.write('hasQuality({},{}), Q({}) :- P({}).\n'.format(phenotype,quality,quality,phenotype))
+
+        out_f.close()
+
+        return print('Phenotypes-Qualitites relations file generated at "{}"'.format(outfile))
 
 
 class hierarchy(object):
@@ -273,7 +340,10 @@ if __name__ == '__main__':
 
         # phenomenet
         #print(tm.get_metadata_per_id(id='FYPO:0000023'))
-        print(tm.get_metadata_per_id(id='PHENO:1'))
+        #print(tm.get_metadata_per_id(id='PHENO:1'))
+        # output phenotype-quality from simple EQ model
+        outfile = "/home/rosinanq/workspace/droppheno/ontologies/phenotypes_qualities.bg"
+        tm.print_qualities(outfile)
 
     except OSError:
         print("Some problem occurred....T_T")
