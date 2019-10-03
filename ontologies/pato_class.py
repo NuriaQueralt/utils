@@ -112,7 +112,6 @@ class term(object):
 
         # Get opposite pato classes
         # Parse chunks and extract 'is_opposite_of' relations
-        c = 0
         for term in pato_terms:
             # PATO class
             pato_subject_match = id_pattern.search(term)
@@ -127,7 +126,7 @@ class term(object):
                 continue
             object = pato_object_match.group(1).replace('_', ':')
 
-            # # check that there are no classes with more than open opposites: CHECKED, there are not
+            # # check that there are no classes with more than one opposites: CHECKED, there are not
             # opp_matches = opposite_pattern.finditer(term)
             # if not opp_matches:
             #     continue
