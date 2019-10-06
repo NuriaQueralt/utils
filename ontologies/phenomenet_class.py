@@ -24,6 +24,7 @@ class term(object):
 
         self.metadata = []
         #self.doid2orpha = {}
+        self.eq_pheno_entity = dict()
         self.eq_pheno_quality = dict()
 
         # Input
@@ -152,13 +153,14 @@ class term(object):
             eq_match = eq_pattern.search(term)
             if eq_match:
                 # entity class
-                #entity = eq_match.group(1)
+                entity_iri = eq_match.group(1)
+                entity = entity_iri.rsplit('/',1)[1]
                 # pato class
                 quality = 'PATO:' + eq_match.group(2)
-                #print('{}\t{}'.format(phenotype,entity))
-                print('{}\t{}'.format(phenotype,quality))
+                print('{}\t{}'.format(phenotype,entity))
+                #print('{}\t{}'.format(phenotype, quality))
+                self.eq_pheno_entity[phenotype] = entity
                 self.eq_pheno_quality[phenotype] = quality
-
 
     def get_metadata_per_id(self, id):
         '''
@@ -227,11 +229,11 @@ class term(object):
         '''
         return self.doid2orpha.get(doid, ['NA'])
 
-    def print_qualities(self,outfile):
+    def print_entities_qualities_from_eqmodel(self,outfile):
         '''
-        This function extracts quality from EQ model for all classes in the ontology to be used in TILDE.
-        Particularly, returns 'has-quality' relations in prolog format
-        :return: output file called  by the user, sth like 'phenotype_quality_relations.bg'
+        This function extracts entity and quality from EQ model for all classes in the ontology to be used in TILDE.
+        Particularly, returns 'has-entity' and 'has-quality' relations in prolog format
+        :return: output file called  by the user, sth like 'phenotype_eqmodel_relations.bg'
         '''
 
         # Output
@@ -239,14 +241,19 @@ class term(object):
 
         # Algorithm
         # Parse chunks and extract mappings, term info
+        # get phenotype-entity relations
+        for phenotype, entity in self.eq_pheno_entity.items():
+            # (hasEntity(x,y),E(y) :- P(x))
+            out_f.write('hasEntity({},{}), E({}) :- P({}).\n'.format(phenotype, entity, entity, phenotype))
+
+        # get phenotype-quality relations
         for phenotype, quality in self.eq_pheno_quality.items():
-            # get qualities
             # (hasQuality(x,y),Q(y) :- P(x))
             out_f.write('hasQuality({},{}), Q({}) :- P({}).\n'.format(phenotype,quality,quality,phenotype))
 
         out_f.close()
 
-        return print('Phenotypes-Qualitites relations file generated at "{}"'.format(outfile))
+        return print('Phenotypes-Entities and Phenotypes-Qualitites relations file generated at "{}"'.format(outfile))
 
 
 class hierarchy(object):
@@ -342,8 +349,8 @@ if __name__ == '__main__':
         #print(tm.get_metadata_per_id(id='FYPO:0000023'))
         #print(tm.get_metadata_per_id(id='PHENO:1'))
         # output phenotype-quality from simple EQ model
-        outfile = "/home/rosinanq/workspace/droppheno/ontologies/phenotypes_qualities.bg"
-        tm.print_qualities(outfile)
+        outfile = "/home/rosinanq/workspace/droppheno/ontologies/phenotype_eqmodel_relations.bg"
+        tm.print_entities_qualities_from_eqmodel(outfile)
 
     except OSError:
         print("Some problem occurred....T_T")
